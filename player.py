@@ -39,6 +39,23 @@ VIDEO_DIR  = '/userdata/videos'
 RESUME_FILE = '/userdata/roms/ports/knulli_player/.resume.json'
 PREFS_FILE  = '/userdata/roms/ports/knulli_player/.prefs.json'
 
+def get_volume():
+    try:
+        r = subprocess.run(['amixer','get','Master'],
+            capture_output=True, text=True, timeout=2)
+        import re
+        m = re.search(r'\[(\d+)%\]', r.stdout)
+        return int(m.group(1)) if m else 50
+    except: return 50
+
+def set_volume(vol):
+    vol = max(0, min(100, vol))
+    try:
+        subprocess.run(['amixer','set','Master',f'{vol}%'],
+            capture_output=True, timeout=2)
+    except: pass
+    return vol
+
 VIDEO_EXTS = {'.mp4','.mkv','.avi','.mov','.wmv','.flv',
               '.webm','.m4v','.ts','.mpg','.mpeg','.3gp'}
 
@@ -104,6 +121,39 @@ THEMES = {
         'C_SEL_LINE':(129,161,193),
         'C_BAR_BG':  (46,52,64),
         'C_BAR_FG':  (136,192,208),
+    },
+    'gruvbox': {
+        'name': 'Gruvbox',
+        'C_BG':      (40,40,40),
+        'C_ACCENT':  (184,187,38),
+        'C_TEXT':    (235,219,178),
+        'C_DIM':     (146,131,116),
+        'C_SEL_BG':  (60,56,54),
+        'C_SEL_LINE':(214,93,14),
+        'C_BAR_BG':  (50,48,47),
+        'C_BAR_FG':  (184,187,38),
+    },
+    'onedark': {
+        'name': 'One Dark',
+        'C_BG':      (40,44,52),
+        'C_ACCENT':  (97,175,239),
+        'C_TEXT':    (171,178,191),
+        'C_DIM':     (92,99,112),
+        'C_SEL_BG':  (44,47,55),
+        'C_SEL_LINE':(198,120,221),
+        'C_BAR_BG':  (33,37,43),
+        'C_BAR_FG':  (97,175,239),
+    },
+    'cyberpunk': {
+        'name': 'Cyberpunk',
+        'C_BG':      (10,0,20),
+        'C_ACCENT':  (255,0,200),
+        'C_TEXT':    (0,255,220),
+        'C_DIM':     (100,0,120),
+        'C_SEL_BG':  (30,0,50),
+        'C_SEL_LINE':(255,220,0),
+        'C_BAR_BG':  (20,0,35),
+        'C_BAR_FG':  (255,0,200),
     },
 }
 THEME_KEYS = list(THEMES.keys())
@@ -454,6 +504,22 @@ class Draw:
         h=f['sm'].render("A:Apply  B:Back  Stick/D-pad:Navigate",True,C_DIM)
         s.blit(h,((SCREEN_W-h.get_width())//2,SCREEN_H-22))
 
+    def confirm_delete(self, path):
+        s,f=self.s,self.f; s.fill(C_BG)
+        pygame.draw.line(s,C_ACCENT,(0,36),(SCREEN_W,36),1)
+        s.blit(f['lg'].render("> DELETE_",True,(255,60,60)),(12,9))
+        # Warning
+        w=pygame.Surface((SCREEN_W-40,80),pygame.SRCALPHA)
+        w.fill((60,0,0,200)); s.blit(w,(20,60))
+        pygame.draw.rect(s,(255,60,60),(20,60,SCREEN_W-40,80),1)
+        s.blit(f['md'].render("Are you sure you want to delete:",True,C_TEXT),(30,72))
+        name=os.path.basename(path)
+        s.blit(f['md'].render(trunc(name,44),True,(255,60,60)),(30,96))
+        s.blit(f['lg'].render("A  —  YES, DELETE",True,(255,60,60)),(20,170))
+        s.blit(f['lg'].render("B  —  Cancel",True,C_ACCENT),(20,210))
+        pygame.draw.line(s,C_DIM,(0,SCREEN_H-34),(SCREEN_W,SCREEN_H-34),1)
+        s.blit(f['sm'].render("This action cannot be undone",True,C_DIM),(20,SCREEN_H-22))
+
     def message(self,text):
         self.s.fill(C_BG)
         t=self.f['lg'].render(text,True,C_ACCENT)
@@ -474,15 +540,18 @@ ABOUT_LINES = [
 ]
 
 CONTROLS_LINES = [
-    "  A        - Play file / Confirm",
-    "  B        - Back",
-    "  X        - Audio track selection",
-    "  Y        - Sort by duration",
-    "  L1 / R1  - Seek -30s / +30s",
-    "  L2 / R2  - Prev / Next file",
-    "  SELECT   - Rescan / Restart video",
-    "  START    - Main menu",
-    "  D-pad / Stick - Navigate",
+    "  A          - Play file / Confirm",
+    "  B          - Back",
+    "  X          - Audio track selection",
+    "  Y          - Sort by duration",
+    "  L1 / R1    - Seek -30s / +30s",
+    "  L2 / R2    - Prev / Next file",
+    "  SELECT     - Rescan / Restart video",
+    "  START      - Main menu",
+    "  L1 + R1    - Delete file (with confirm)",
+    "  D-pad ↑↓   - Navigate / Volume in video",
+    "  D-pad ←→   - Navigate / Seek 5s in video",
+    "  Stick      - Navigate",
 ]
 
 class App:
@@ -528,6 +597,9 @@ class App:
         self.total_root = 0
 
         self.axis_dir  = 0; self.axis_t = 0.0; self.axis_moved = False
+        self.volume = get_volume()
+        self.l1_held = False; self.r1_held = False  # for L1+R1 combo
+        self.confirm_delete = None  # path pending deletion
         self.running   = True
         self.audio_counts = {}  # path -> int, кол-во аудио дорожек
 
@@ -551,6 +623,19 @@ class App:
                     self.durations[path]=info['duration']
                 if path not in self.audio_counts:
                     self.audio_counts[path]=len(info['audio'])
+
+    def _delete_combo(self):
+        """L1+R1 — ask to delete selected item."""
+        if self.mode=='browser' and self.items and self.sel<len(self.items):
+            item=self.items[self.sel]
+            if item['type'] in ('file','folder'):
+                self.confirm_delete=item['path']
+                self.mode='confirm_delete'
+        elif self.mode=='video' and self.cur_file:
+            self.confirm_delete=self.cur_file
+            self.be.stop()
+            self._show_pygame()
+            self.mode='confirm_delete'
 
     def _current_path_for_restart(self):
         return self.be._current_path
@@ -613,7 +698,15 @@ class App:
             if ev.type==pygame.QUIT: self.running=False
 
             elif ev.type==pygame.JOYBUTTONDOWN:
-                self._btn(ev.button)
+                if ev.button==BTN_L1: self.l1_held=True
+                if ev.button==BTN_R1: self.r1_held=True
+                if self.l1_held and self.r1_held:
+                    self._delete_combo()
+                else:
+                    self._btn(ev.button)
+            elif ev.type==pygame.JOYBUTTONUP:
+                if ev.button==BTN_L1: self.l1_held=False
+                if ev.button==BTN_R1: self.r1_held=False
 
             elif ev.type==pygame.JOYAXISMOTION:
                 if ev.axis==AXIS_LY:
@@ -628,10 +721,16 @@ class App:
 
             elif ev.type==pygame.JOYHATMOTION:
                 hx,hy=ev.value
-                if hy==1:   self._nav(-1)
-                elif hy==-1: self._nav(1)
-                elif hx==-1 and self.mode=='browser': self._go_parent()
-                elif hx==1  and self.mode=='browser': self._enter_selected()
+                if self.mode=='video':
+                    if hy==1:    self.volume=set_volume(self.volume+5)
+                    elif hy==-1: self.volume=set_volume(self.volume-5)
+                    elif hx==-1: self.be.seek(-5)
+                    elif hx==1:  self.be.seek(5)
+                else:
+                    if hy==1:   self._nav(-1)
+                    elif hy==-1: self._nav(1)
+                    elif hx==-1 and self.mode=='browser': self._go_parent()
+                    elif hx==1  and self.mode=='browser': self._enter_selected()
 
             elif ev.type==pygame.KEYDOWN:
                 if ev.key==pygame.K_ESCAPE: self._btn(BTN_B)
@@ -678,6 +777,29 @@ class App:
                 elif item=='Theme':  self.mode='theme'
                 elif item=='Font Size': self.mode='fontsize'
                 elif item=='Exit':   self.running=False
+            return
+
+        # ── confirm delete ──
+        if self.mode=='confirm_delete':
+            if b==BTN_A and self.confirm_delete:
+                path=self.confirm_delete
+                try:
+                    if os.path.isfile(path):
+                        os.remove(path)
+                        # Remove from resume/durations
+                        self.resume.pop(path,None); save_resume(self.resume)
+                        self.durations.pop(path,None)
+                        self.audio_counts.pop(path,None)
+                    elif os.path.isdir(path):
+                        import shutil; shutil.rmtree(path)
+                except Exception as e:
+                    pass
+                self.confirm_delete=None
+                self.cur_file=None
+                self.mode='browser'
+            elif b==BTN_B:
+                self.confirm_delete=None
+                self.mode='browser'
             return
 
         # ── info pages ──
@@ -852,6 +974,8 @@ class App:
             self.draw.audio_menu(tracks, self.audio_sel, self.cur_audio)
         elif self.mode=='main_menu':
             self.draw.main_menu(MENU_ITEMS, self.menu_sel)
+        elif self.mode=='confirm_delete':
+            self.draw.confirm_delete(self.confirm_delete)
         elif self.mode=='about':
             self.draw.info_page("ABOUT", ABOUT_LINES)
         elif self.mode=='controls':
