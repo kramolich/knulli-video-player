@@ -1,0 +1,3 @@
+# gptokeyb2 config для knulli player
+# Пустой — просто блокируем геймпад от ES-DE
+[python3]
