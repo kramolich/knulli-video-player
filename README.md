@@ -1,112 +1,121 @@
-# Knulli Video Player — RG40XXV
+# Knulli Video Player
 
-Видео плеер для Anbernic RG40XXV с прошивкой Knulli.
-Управление геймпадом, плейлист, субтитры, аудио треки.
+A terminal-style video player for Anbernic handhelds running Knulli or Batocera firmware. No extra dependencies — everything needed is already included in Knulli/Batocera out of the box.
 
-## Зависимости
+Built with ffmpeg (direct framebuffer output) and pygame for the UI.
 
-- Python 3.8+
-- mpv (уже есть в Knulli)
-- python-mpv
-- pygame
+**Tested on:** Anbernic RG40XXV / Knulli
 
-## Установка
+---
 
-### 1. Скопируй файлы на устройство
+## Features
 
-Через SSH или SD карту скопируй папку `knulli_player/` в:
+- Gamepad-only navigation
+- Folder browser with nested directory support
+- Resume playback from last position
+- Multi audio track selection (saved as preference)
+- Sort files by duration or name
+- Background duration scanning on startup
+- 5 terminal color themes: Terminal, Dracula, Solarized, Monokai, Nord
+- Adjustable font size: Small / Medium / Large
+- Restart current video with SELECT
+
+---
+
+## Requirements
+
+No installation needed. The following are already included in Knulli/Batocera:
+
+- Python 3.11+
+- pygame 2.5+
+- ffmpeg 7.x
+- ffprobe
+
+---
+
+## Installation
+
+1. Copy the `knulli_player/` folder to your device via SSH or SD card:
 
 ```
 /userdata/roms/ports/knulli_player/
 ```
 
-### 2. Установи зависимости (через SSH)
+2. Run setup once via SSH:
 
 ```bash
-pip install python-mpv pygame --break-system-packages
+bash /userdata/roms/ports/knulli_player/setup.sh
 ```
 
-### 3. Сделай скрипт исполняемым
+This sets permissions, creates the ES-DE launcher, and creates the `/userdata/videos/` folder automatically.
 
-```bash
-chmod +x /userdata/roms/ports/knulli_player/launch.sh
-```
+3. Put your videos in:
 
-### 4. Зарегистрируй как порт в Knulli
-
-Создай файл `/userdata/roms/ports/KnulliPlayer.sh`:
-
-```bash
-#!/bin/bash
-/userdata/roms/ports/knulli_player/launch.sh /userdata/videos
-```
-
-```bash
-chmod +x /userdata/roms/ports/KnulliPlayer.sh
-```
-
-После этого плеер появится в разделе **Ports** в ES-DE/Batocera.
-
-### 5. Видео файлы
-
-Положи видео в:
 ```
 /userdata/videos/
 ```
 
-Поддерживаемые форматы: `.mp4 .mkv .avi .mov .wmv .flv .webm .m4v .ts .mpg .mpeg .3gp`
+The player will appear in the **Ports** section in ES-DE.
 
 ---
 
-## Управление геймпадом
+## Controls
 
-| Кнопка | Действие |
-|--------|----------|
-| **A** | Воспроизведение / Пауза |
-| **B** | Назад / Стоп |
-| **X** | Меню субтитров |
-| **Y** | Меню аудио треков |
-| **L1** | Перемотка −30 сек |
-| **R1** | Перемотка +30 сек |
-| **L2** | Предыдущий файл |
-| **R2** | Следующий файл |
-| **SELECT** | Плейлист / Список файлов |
-| **START** | Показать OSD |
-| **Левый стик ↑↓** | Навигация по списку |
+| Button | Action |
+|--------|--------|
+| A | Play / Confirm |
+| B | Back |
+| X | Audio track selection |
+| Y | Sort by duration |
+| L1 / R1 | Seek −30s / +30s |
+| L2 / R2 | Previous / Next file |
+| SELECT | Rescan folder / Restart video |
+| START | Main menu |
+| D-pad / Stick | Navigate |
 
 ---
 
-## Запуск с параметром
+## Supported formats
+
+`.mp4` `.mkv` `.avi` `.mov` `.wmv` `.flv` `.webm` `.m4v` `.ts` `.mpg` `.mpeg` `.3gp`
+
+---
+
+## Main menu (START)
+
+| Item | Description |
+|------|-------------|
+| About | Author and engine info |
+| Controls | Button reference |
+| Theme | Choose color theme |
+| Font Size | Small / Medium / Large |
+| Exit | Quit the player |
+
+---
+
+## Manual launch
 
 ```bash
-python3 player.py /path/to/video.mkv      # конкретный файл
-python3 player.py /path/to/folder/        # папка с видео
-python3 player.py                          # ~/videos по умолчанию
+python3 /userdata/roms/ports/knulli_player/player.py /userdata/videos
 ```
 
 ---
 
-## Структура
+## File structure
 
 ```
 knulli_player/
-├── player.py     — основной плеер
-├── launch.sh     — лаунчер для Knulli
-└── README.md     — этот файл
+├── player.py     — main player
+├── launch.sh     — Knulli / ES-DE launcher
+├── setup.sh      — first-run setup script
+├── keys.gptk     — gamepad mapping for gptokeyb2
+├── LICENSE
+└── README.md
 ```
 
-## Маппинг кнопок
+---
 
-Если кнопки работают неправильно, проверь через:
-```bash
-python3 -c "
-import pygame; pygame.init(); pygame.joystick.init()
-j = pygame.joystick.Joystick(0); j.init()
-while True:
-    pygame.event.pump()
-    for i in range(j.get_numbuttons()):
-        if j.get_button(i): print('Button:', i)
-"
-```
+## Author
 
-И поправь константы `BTN_*` в начале `player.py`.
+**KRAMOLICH**  
+Built for Knulli / Batocera handheld gaming devices.
