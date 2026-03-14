@@ -108,8 +108,6 @@ echo "=== Setup complete! ==="
 echo "Launch from ES-DE → Ports → Knulli Video Player"
 echo ""
 
-# Self-destruct: remove setup.sh and launch.sh
+# Self-destruct: remove this script and launch.sh
 rm -f "$PLAYER_DIR/launch.sh"
-echo "[OK] launch.sh removed (no longer needed)"
-rm -f "$PLAYER_DIR/setup.sh"
-# ↑ this script deletes itself last
+rm -f "$PLAYER_DIR/Setup Knulli Video Player.sh"
