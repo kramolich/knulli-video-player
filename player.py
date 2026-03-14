@@ -14,16 +14,9 @@ def first_run_setup():
     flag = os.path.join(player_dir, '.setup_done')
     if os.path.exists(flag): return
     try:
-        # Make scripts executable
-        for f in ['launch.sh', 'player.py', 'setup.sh']:
-            p = os.path.join(player_dir, f)
-            if os.path.exists(p): os.chmod(p, 0o755)
-        # Create ES-DE launcher
-        launcher = '/userdata/roms/ports/Knulli Video Player.sh'
-        if not os.path.exists(launcher):
-            with open(launcher, 'w') as f:
-                f.write('#!/bin/bash\nbash "/userdata/roms/ports/knulli_player/launch.sh"\n')
-            os.chmod(launcher, 0o755)
+        # Make player executable
+        p = os.path.join(player_dir, 'player.py')
+        if os.path.exists(p): os.chmod(p, 0o755)
         # Create videos dir
         os.makedirs('/userdata/videos', exist_ok=True)
         # Mark done

@@ -44,10 +44,10 @@ No installation needed. The following are already included in Knulli/Batocera:
 2. Run setup once via SSH:
 
 ```bash
-bash /userdata/roms/ports/knulli_player/setup.sh
+bash "/userdata/roms/ports/knulli_player/Setup Knulli Video Player.sh"
 ```
 
-This sets permissions, creates the ES-DE launcher, and creates the `/userdata/videos/` folder automatically.
+This sets permissions, creates the ES-DE launcher, and creates the `/userdata/videos/` folder automatically. The setup script deletes itself when done.
 
 3. Put your videos in:
 
@@ -55,7 +55,7 @@ This sets permissions, creates the ES-DE launcher, and creates the `/userdata/vi
 /userdata/videos/
 ```
 
-The player will appear in the **Ports** section in ES-DE.
+4. **Update your game list in ES-DE** (Start → Game Settings → Update Game List) to see the player in the **Ports** section.
 
 ---
 
@@ -105,10 +105,9 @@ python3 /userdata/roms/ports/knulli_player/player.py /userdata/videos
 
 ```
 knulli_player/
-├── player.py     — main player
-├── launch.sh     — Knulli / ES-DE launcher
-├── setup.sh      — first-run setup script
-├── keys.gptk     — gamepad mapping for gptokeyb2
+├── player.py                      — main player
+├── Setup Knulli Video Player.sh   — first-run setup (deletes itself after install)
+├── keys.gptk                      — gamepad mapping for gptokeyb2
 ├── LICENSE
 └── README.md
 ```
